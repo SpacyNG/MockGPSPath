@@ -102,6 +102,7 @@ public class MockGPSPathService extends Service {
 	 */
 	class UpdateGPSThread extends Thread {
 
+		private static final float GPS_ACCURACY = 10.0f;
 		ArrayList<GeoPoint> locations = new ArrayList<GeoPoint>();
 		boolean[] realpoints;
 		double[] distances;
@@ -134,13 +135,15 @@ public class MockGPSPathService extends Service {
 			while (Running) {
 				calcCurrentPosition();
 
-				Location loc = new Location("gps");
+				Location loc = new Location(LocationManager.GPS_PROVIDER);
 				loc.setTime(System.currentTimeMillis());
 				loc.setLatitude(curLat);
 				loc.setLongitude(curLong);
 				loc.setBearing(curBearing);
 				loc.setSpeed((float) MperSec);
-				locationManager.setTestProviderLocation("gps", loc);
+				loc.setAccuracy(GPS_ACCURACY);
+				locationManager.setTestProviderLocation(
+						LocationManager.GPS_PROVIDER, loc);
 				try {
 					Thread.sleep(TIME_BETWEEN_UPDATES_MS);
 				} catch (Exception e) {
