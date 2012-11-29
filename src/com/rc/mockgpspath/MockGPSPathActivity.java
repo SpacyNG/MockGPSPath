@@ -27,8 +27,6 @@ import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
 
-import com.google.ads.AdRequest;
-import com.google.ads.AdView;
 import com.google.android.maps.GeoPoint;
 import com.google.android.maps.MapActivity;
 import com.google.android.maps.MapView;
@@ -141,11 +139,6 @@ public class MockGPSPathActivity extends MapActivity {
 		mapView.getController().setZoom(zoomLevel);
 		if (centerPoint != null)
 			mapView.getController().setCenter(centerPoint);
-
-		AdView adView = (AdView) findViewById(R.id.adView);
-		adView.setVisibility(View.VISIBLE);
-		AdRequest adRequest = new AdRequest();
-		adView.loadAd(adRequest);
 
 		View search = findViewById(R.id.search);
 		search.setOnClickListener(searchClickListener);
