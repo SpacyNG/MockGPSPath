@@ -11,15 +11,17 @@ import java.util.List;
 import org.xmlpull.v1.XmlPullParserException;
 
 import android.app.Dialog;
+import android.app.ProgressDialog;
 import android.content.Intent;
+import android.location.Location;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.Window;
-import android.view.animation.AccelerateInterpolator;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
 import android.view.animation.AnimationSet;
@@ -27,7 +29,6 @@ import android.view.animation.ScaleAnimation;
 import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.SeekBar;
-import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
 
 import com.google.android.maps.GeoPoint;
@@ -35,7 +36,6 @@ import com.google.android.maps.MapActivity;
 import com.google.android.maps.MapView;
 import com.google.android.maps.MyLocationOverlay;
 import com.google.android.maps.Overlay;
-import com.rc.mockgpspath.NodeOverlay.NodeOverlayCallbacks;
 import com.rc.mockgpspath.gpx.GpxParser;
 import com.rc.mockgpspath.quickaction.ActionItem;
 import com.rc.mockgpspath.quickaction.QuickAction;
@@ -53,9 +53,56 @@ public class ReplayGpxActivity extends MapActivity {
 	private static GeoPoint centerPoint = null;
 
 	private MapView mapView;
-	private NodeOverlay nodeOverlay;
 	private ImageView trash, play, stop;
 	private MyLocationOverlay myLocationOverlay;
+	private ArrayList<Location> gpxPoints;
+
+	private class ReadGpxTask extends
+			AsyncTask<File, Void, ArrayList<Location>> {
+		private ProgressDialog pd;
+
+		@Override
+		protected void onPreExecute() {
+			pd = new ProgressDialog(ReplayGpxActivity.this);
+			pd.setIndeterminate(true);
+			pd.setTitle("Reading GPX...");
+			pd.setMessage("Please wait while we read the GPX file");
+			pd.setCancelable(false);
+			pd.setCanceledOnTouchOutside(false);
+			pd.show();
+		}
+
+		@Override
+		protected ArrayList<Location> doInBackground(File... params) {
+			BufferedInputStream in = null;
+			try {
+				File sourceFile = params[0];
+				in = new BufferedInputStream(new FileInputStream(sourceFile));
+				GpxParser parser = new GpxParser();
+				return parser.parse(in);
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+			} catch (XmlPullParserException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			} finally {
+				if (in != null) {
+					try {
+						in.close();
+					} catch (IOException e) {
+					}
+				}
+			}
+			return null;
+		}
+
+		@Override
+		protected void onPostExecute(ArrayList<Location> result) {
+			pd.dismiss();
+			readyMode();
+		}
+	}
 
 	/** Called when the activity is first created. */
 	@Override
@@ -68,14 +115,6 @@ public class ReplayGpxActivity extends MapActivity {
 		mapView.getController().setZoom(2);
 
 		List<Overlay> overlays = mapView.getOverlays();
-		nodeOverlay = new NodeOverlay(this.getApplicationContext(),
-				new NodeOverlayCallbacks() {
-					@Override
-					public MapView getMapView() {
-						return mapView;
-					}
-				});
-		overlays.add(nodeOverlay);
 		myLocationOverlay = new MyLocationOverlay(ReplayGpxActivity.this,
 				mapView);
 		overlays.add(myLocationOverlay);
@@ -91,32 +130,21 @@ public class ReplayGpxActivity extends MapActivity {
 		if (MockGPSPathService.instance != null
 				&& MockGPSPathService.instance.currentThread != null) {
 			// If the service is running, then we already have a path and are
-			// following is. Swap to running mode and pull the map points from
-			// the service.
+			// following it.
 			runningMode();
-			for (int i = 0; i < MockGPSPathService.instance.currentThread.locations
-					.size(); i++) {
-				GeoPoint loc = MockGPSPathService.instance.currentThread.locations
-						.get(i);
-				RouteNodeOverlayItem item = new RouteNodeOverlayItem(loc,
-						MockGPSPathService.instance.currentThread.realpoints[i]);
-				nodeOverlay.addItem(item, true);
-			}
 		} else {
 			@SuppressWarnings("unchecked")
-			List<RouteNodeOverlayItem> lastList = (List<RouteNodeOverlayItem>) getLastNonConfigurationInstance();
+			ArrayList<Location> lastList = (ArrayList<Location>) getLastNonConfigurationInstance();
 
 			if (lastList != null && lastList.size() > 0) {
 				// If we already had a list in the last config, it means this is
 				// just an activity change and we need to re-add all of the
 				// previous points.
-				for (RouteNodeOverlayItem item : lastList) {
-					nodeOverlay.addItem(item, true);
-				}
-				addingPointsMode();
+				gpxPoints = lastList;
+				readyMode();
 			} else {
 				// No points, regular start mode
-				addingPointsMode();
+				startupMode();
 			}
 		}
 
@@ -127,34 +155,14 @@ public class ReplayGpxActivity extends MapActivity {
 		Uri uri = getIntent().getData();
 		if (uri != null) {
 			File sourceFile = new File(uri.getPath());
-			BufferedInputStream in = null;
-			try {
-				in = new BufferedInputStream(new FileInputStream(sourceFile));
-				GpxParser parser = new GpxParser();
-				parser.parse(in);
-			} catch (FileNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (XmlPullParserException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} finally {
-				if (in != null) {
-					try {
-						in.close();
-					} catch (IOException e) {
-					}
-				}
-			}
+			AsyncTask<File, Void, ArrayList<Location>> readGpxTask = new ReadGpxTask();
+			readGpxTask.execute(sourceFile);
 		}
 	}
 
 	@Override
 	public Object onRetainNonConfigurationInstance() {
-		return nodeOverlay.overlaylist;
+		return gpxPoints;
 	}
 
 	public void startupMode() {
@@ -163,7 +171,7 @@ public class ReplayGpxActivity extends MapActivity {
 		hideView(trash);
 	}
 
-	public void addingPointsMode() {
+	public void readyMode() {
 		hideView(stop);
 		showView(play);
 		showView(trash);
@@ -331,7 +339,7 @@ public class ReplayGpxActivity extends MapActivity {
 							source.dismiss();
 
 							if (actionId == OK) {
-								nodeOverlay.clear();
+								gpxPoints = null;
 								startupMode();
 							}
 						}
@@ -345,9 +353,6 @@ public class ReplayGpxActivity extends MapActivity {
 
 		@Override
 		public void onClick(View v) {
-			List<GeoPoint> locations = nodeOverlay.getLocations();
-			final double distance = MapsHelper.distance(locations);
-
 			LayoutInflater inflater = LayoutInflater
 					.from(ReplayGpxActivity.this);
 			View start = inflater.inflate(R.layout.start, null);
@@ -364,30 +369,15 @@ public class ReplayGpxActivity extends MapActivity {
 			final CheckBox randomizespeed = (CheckBox) start
 					.findViewById(R.id.randomizespeed);
 
+			distanceTV.setText("-");
+			speedTV.setText("-");
+			elapsetimeTV.setText("-");
+			finishtimeTV.setText("-");
+			speedSeek.setEnabled(false);
+			randomizespeed.setEnabled(false);
 			QuickAction quickAction = new QuickAction(ReplayGpxActivity.this);
-			distanceTV.setText(String.format("%,1.2f km", distance / 1000));
 			quickAction.addDividerView(start);
 
-			speedSeek.setInterpolator(new AccelerateInterpolator());
-			speedSeek.setOnSeekBarChangeListener(new OnSeekBarChangeListener() {
-
-				@Override
-				public void onStopTrackingTouch(SeekBar seekBar) {
-				}
-
-				@Override
-				public void onStartTrackingTouch(SeekBar seekBar) {
-				}
-
-				@Override
-				public void onProgressChanged(SeekBar seekBar, int progress,
-						boolean fromUser) {
-					MapsHelper.calcTimes(distance, progress, elapsetimeTV,
-							finishtimeTV, speedTV);
-				}
-			});
-			MapsHelper.calcTimes(distance, speedSeek.getProgress(),
-					elapsetimeTV, finishtimeTV, speedTV);
 
 			ActionItem item = new ActionItem();
 			item.setTitle("Start Mock GPS");
@@ -433,19 +423,7 @@ public class ReplayGpxActivity extends MapActivity {
 		i.putExtra("MperSec", MperSec);
 		i.putExtra("randomizespeed", randomizespeed);
 
-		ArrayList<String> pass = new ArrayList<String>();
-		boolean[] realpoints = new boolean[nodeOverlay.overlaylist.size()];
-		for (int j = 0; j < nodeOverlay.overlaylist.size(); j++) {
-			RouteNodeOverlayItem item = nodeOverlay.overlaylist.get(j);
-			String ns = Double.toString(item.getPoint().getLatitudeE6() / 1E6)
-					+ ":"
-					+ Double.toString(item.getPoint().getLongitudeE6() / 1E6);
-			pass.add(ns);
-			realpoints[j] = item.realpoint;
-		}
-
-		i.putStringArrayListExtra("locations", pass);
-		i.putExtra("realpoints", realpoints);
+		i.putParcelableArrayListExtra("LOCATIONS", gpxPoints);
 
 		startService(i);
 
@@ -504,8 +482,7 @@ public class ReplayGpxActivity extends MapActivity {
 								i.putExtra("action", "com.rc.mockgpspath.stop");
 
 								startService(i);
-								nodeOverlay.clear();
-								startupMode();
+								readyMode();
 							}
 						}
 					});
@@ -513,5 +490,4 @@ public class ReplayGpxActivity extends MapActivity {
 			quickAction.show(v);
 		}
 	};
-
 }

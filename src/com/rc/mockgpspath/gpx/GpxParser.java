@@ -3,7 +3,6 @@ package com.rc.mockgpspath.gpx;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.List;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -19,7 +18,7 @@ public class GpxParser {
 	// We don't use namespaces
 	private static final String ns = null;
 
-	public List<Location> parse(InputStream in)
+	public ArrayList<Location> parse(InputStream in)
 			throws XmlPullParserException, IOException {
 		try {
 			XmlPullParser parser = Xml.newPullParser();
@@ -32,9 +31,9 @@ public class GpxParser {
 		}
 	}
 
-	private List<Location> readGpx(XmlPullParser parser)
+	private ArrayList<Location> readGpx(XmlPullParser parser)
 			throws XmlPullParserException, IOException {
-		List<Location> entries = new ArrayList<Location>();
+		ArrayList<Location> entries = new ArrayList<Location>(0);
 
 		parser.require(XmlPullParser.START_TAG, ns, "gpx");
 		while (parser.next() != XmlPullParser.END_TAG) {
@@ -52,9 +51,9 @@ public class GpxParser {
 		return entries;
 	}
 
-	private List<Location> readTrack(XmlPullParser parser)
+	private ArrayList<Location> readTrack(XmlPullParser parser)
 			throws XmlPullParserException, IOException {
-		List<Location> result = null;
+		ArrayList<Location> result = null;
 		while (parser.next() != XmlPullParser.END_TAG) {
 			if (parser.getEventType() != XmlPullParser.START_TAG) {
 				continue;
@@ -69,9 +68,9 @@ public class GpxParser {
 		return result;
 	}
 
-	private List<Location> readTrackSegment(XmlPullParser parser)
+	private ArrayList<Location> readTrackSegment(XmlPullParser parser)
 			throws XmlPullParserException, IOException {
-		List<Location> entries = new ArrayList<Location>();
+		ArrayList<Location> entries = new ArrayList<Location>();
 		while (parser.next() != XmlPullParser.END_TAG) {
 			if (parser.getEventType() != XmlPullParser.START_TAG) {
 				continue;
