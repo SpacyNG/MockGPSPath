@@ -8,6 +8,9 @@ import java.util.List;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
+import android.location.Location;
+import android.location.LocationManager;
+import android.os.Bundle;
 import android.text.format.Time;
 import android.util.Log;
 import android.util.Xml;
@@ -16,22 +19,22 @@ public class GpxParser {
 	// We don't use namespaces
 	private static final String ns = null;
 
-	public List<ExtendedGeoPoint> parse(InputStream in)
+	public List<Location> parse(InputStream in)
 			throws XmlPullParserException, IOException {
 		try {
 			XmlPullParser parser = Xml.newPullParser();
 			parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false);
 			parser.setInput(in, null);
 			parser.nextTag();
-			return readFeed(parser);
+			return readGpx(parser);
 		} finally {
 			in.close();
 		}
 	}
 
-	private List<ExtendedGeoPoint> readFeed(XmlPullParser parser)
+	private List<Location> readGpx(XmlPullParser parser)
 			throws XmlPullParserException, IOException {
-		List<ExtendedGeoPoint> entries = new ArrayList<ExtendedGeoPoint>();
+		List<Location> entries = new ArrayList<Location>();
 
 		parser.require(XmlPullParser.START_TAG, ns, "gpx");
 		while (parser.next() != XmlPullParser.END_TAG) {
@@ -49,9 +52,9 @@ public class GpxParser {
 		return entries;
 	}
 
-	private List<ExtendedGeoPoint> readTrack(XmlPullParser parser)
+	private List<Location> readTrack(XmlPullParser parser)
 			throws XmlPullParserException, IOException {
-		List<ExtendedGeoPoint> result = null;
+		List<Location> result = null;
 		while (parser.next() != XmlPullParser.END_TAG) {
 			if (parser.getEventType() != XmlPullParser.START_TAG) {
 				continue;
@@ -66,16 +69,16 @@ public class GpxParser {
 		return result;
 	}
 
-	private List<ExtendedGeoPoint> readTrackSegment(XmlPullParser parser)
+	private List<Location> readTrackSegment(XmlPullParser parser)
 			throws XmlPullParserException, IOException {
-		List<ExtendedGeoPoint> entries = new ArrayList<ExtendedGeoPoint>();
+		List<Location> entries = new ArrayList<Location>();
 		while (parser.next() != XmlPullParser.END_TAG) {
 			if (parser.getEventType() != XmlPullParser.START_TAG) {
 				continue;
 			}
 			String name = parser.getName();
 			if (name.equals("trkpt")) {
-				ExtendedGeoPoint trackPoint = readTrackPoint(parser);
+				Location trackPoint = readTrackPoint(parser);
 				entries.add(trackPoint);
 				Log.d(getClass().getCanonicalName(), trackPoint.toString());
 			} else {
@@ -93,7 +96,7 @@ public class GpxParser {
 	 * @throws IOException
 	 * @throws XmlPullParserException
 	 */
-	private ExtendedGeoPoint readTrackPoint(XmlPullParser parser)
+	private Location readTrackPoint(XmlPullParser parser)
 			throws XmlPullParserException, IOException {
 		float latitude = Float.valueOf(parser.getAttributeValue(null, "lat"));
 		float longitude = Float.valueOf(parser.getAttributeValue(null, "lon"));
@@ -117,10 +120,15 @@ public class GpxParser {
 				skip(parser);
 			}
 		}
-		int latitudeE6 = (int) (latitude * 1E6);
-		int longitudeE6 = (int) (longitude * 1E6);
-		return new ExtendedGeoPoint(latitudeE6, longitudeE6, hr, elevation,
-				timestamp);
+		Location location = new Location(LocationManager.GPS_PROVIDER);
+		location.setLatitude(latitude);
+		location.setLongitude(longitude);
+		location.setTime(timestamp);
+		location.setAltitude(elevation);
+		Bundle extras = new Bundle(1);
+		extras.putInt("HR", hr);
+		location.setExtras(extras);
+		return location;
 	}
 
 	private int readExtensions(XmlPullParser parser)
