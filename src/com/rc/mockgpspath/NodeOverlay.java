@@ -3,14 +3,17 @@ package com.rc.mockgpspath;
 import java.util.ArrayList;
 import java.util.List;
 
+import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.PathDashPathEffect;
-import android.graphics.Point;
 import android.graphics.Path.FillType;
+import android.graphics.PathDashPathEffect;
 import android.graphics.PathDashPathEffect.Style;
+import android.graphics.Point;
+import android.os.Handler;
+import android.os.Looper;
 
 import com.google.android.maps.GeoPoint;
 import com.google.android.maps.ItemizedOverlay;
@@ -27,13 +30,18 @@ import com.google.android.maps.Projection;
  */
 public class NodeOverlay extends ItemizedOverlay<RouteNodeOverlayItem> {
 
-	private final MockGPSPathActivity mockGPSPathActivity;
+	public interface NodeOverlayCallbacks {
+		public MapView getMapView();
+	}
+
 	List<RouteNodeOverlayItem> overlaylist = new ArrayList<RouteNodeOverlayItem>();
 	private List<RouteNodeOverlayItem> overlaylistReal = new ArrayList<RouteNodeOverlayItem>();
+	private final NodeOverlayCallbacks callback;
 
-	public NodeOverlay(MockGPSPathActivity mockGPSPathActivity) {
-		super(boundCenterBottom(mockGPSPathActivity.getResources().getDrawable(R.drawable.mappin)));
-		this.mockGPSPathActivity = mockGPSPathActivity;
+	public NodeOverlay(Context context, NodeOverlayCallbacks callback) {
+		super(boundCenterBottom(context.getResources().getDrawable(
+				R.drawable.mappin)));
+		this.callback = callback;
 		populate();
 	}
 
@@ -62,7 +70,7 @@ public class NodeOverlay extends ItemizedOverlay<RouteNodeOverlayItem> {
 				public void run() {
 					try {
 						final ArrayList<GeoPoint> extraPoints = MapsHelper.getJavascriptDirections(lastItem.getPoint(), item.getPoint());
-						NodeOverlay.this.mockGPSPathActivity.runOnUiThread(new Runnable() {
+						new Handler(Looper.getMainLooper()).post(new Runnable() {
 
 							@Override
 							public void run() {
@@ -74,9 +82,9 @@ public class NodeOverlay extends ItemizedOverlay<RouteNodeOverlayItem> {
 								overlaylist.add(item);
 								overlaylistReal.add(item);
 								populate();
-								NodeOverlay.this.mockGPSPathActivity.mapView.invalidate();
+										callback.getMapView().invalidate();
 							}
-						});
+								});
 					} catch (Exception ex) {
 						ex.printStackTrace();
 					}
@@ -88,7 +96,7 @@ public class NodeOverlay extends ItemizedOverlay<RouteNodeOverlayItem> {
 		if (item.realpoint) {
 			overlaylistReal.add(item);
 			populate();
-			this.mockGPSPathActivity.mapView.invalidate();
+			callback.getMapView().invalidate();
 		}
 	}
 
@@ -99,7 +107,7 @@ public class NodeOverlay extends ItemizedOverlay<RouteNodeOverlayItem> {
 		overlaylist.clear();
 		overlaylistReal.clear();
 		populate();
-		this.mockGPSPathActivity.mapView.invalidate();
+		callback.getMapView().invalidate();
 	}
 
 	public List<GeoPoint> getLocations() {
