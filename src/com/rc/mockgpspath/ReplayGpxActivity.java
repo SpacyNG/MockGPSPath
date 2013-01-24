@@ -100,6 +100,7 @@ public class ReplayGpxActivity extends MapActivity {
 		@Override
 		protected void onPostExecute(ArrayList<Location> result) {
 			pd.dismiss();
+			setGpxPoints(result);
 			readyMode();
 		}
 	}
@@ -127,8 +128,8 @@ public class ReplayGpxActivity extends MapActivity {
 		play.setOnClickListener(playClickListener);
 		stop.setOnClickListener(stopClickListener);
 
-		if (MockGPSPathService.instance != null
-				&& MockGPSPathService.instance.currentThread != null) {
+		if (PlayLocationsService.instance != null
+				&& PlayLocationsService.instance.currentThread != null) {
 			// If the service is running, then we already have a path and are
 			// following it.
 			runningMode();
@@ -158,6 +159,10 @@ public class ReplayGpxActivity extends MapActivity {
 			AsyncTask<File, Void, ArrayList<Location>> readGpxTask = new ReadGpxTask();
 			readGpxTask.execute(sourceFile);
 		}
+	}
+
+	public void setGpxPoints(ArrayList<Location> gpxPoints) {
+		this.gpxPoints = gpxPoints;
 	}
 
 	@Override
@@ -417,7 +422,8 @@ public class ReplayGpxActivity extends MapActivity {
 	 *            Whether or not to use a random speed.
 	 */
 	void startMockPaths(double MperSec, boolean randomizespeed) {
-		Intent i = new Intent(ReplayGpxActivity.this, MockGPSPathService.class);
+		Intent i = new Intent(ReplayGpxActivity.this,
+				PlayLocationsService.class);
 
 		i.putExtra("action", "com.rc.mockgpspath.start");
 		i.putExtra("MperSec", MperSec);
@@ -477,7 +483,7 @@ public class ReplayGpxActivity extends MapActivity {
 
 							if (actionId == OK) {
 								Intent i = new Intent(ReplayGpxActivity.this,
-										MockGPSPathService.class);
+										PlayLocationsService.class);
 
 								i.putExtra("action", "com.rc.mockgpspath.stop");
 
