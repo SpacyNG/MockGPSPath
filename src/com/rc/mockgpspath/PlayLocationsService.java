@@ -72,7 +72,8 @@ public class PlayLocationsService extends Service {
 	}
 
 	public void createProgressNotification() {
-		Notification notification = new Notification(R.drawable.ic_launcher,
+		Notification notification = new Notification(
+				android.R.drawable.ic_menu_mylocation,
 				getString(R.string.mockgpspath_running_),
 				System.currentTimeMillis());
 		notification.flags = Notification.FLAG_NO_CLEAR
