@@ -1,10 +1,18 @@
 package com.rc.mockgpspath;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.xmlpull.v1.XmlPullParserException;
+
 import android.app.Dialog;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.view.LayoutInflater;
@@ -28,6 +36,7 @@ import com.google.android.maps.MapView;
 import com.google.android.maps.MyLocationOverlay;
 import com.google.android.maps.Overlay;
 import com.rc.mockgpspath.NodeOverlay.NodeOverlayCallbacks;
+import com.rc.mockgpspath.gpx.GpxParser;
 import com.rc.mockgpspath.quickaction.ActionItem;
 import com.rc.mockgpspath.quickaction.QuickAction;
 import com.rc.mockgpspath.quickaction.QuickAction.OnActionItemClickListener;
@@ -114,6 +123,33 @@ public class ReplayGpxActivity extends MapActivity {
 		mapView.getController().setZoom(zoomLevel);
 		if (centerPoint != null)
 			mapView.getController().setCenter(centerPoint);
+
+		Uri uri = getIntent().getData();
+		if (uri != null) {
+			File sourceFile = new File(uri.getPath());
+			BufferedInputStream in = null;
+			try {
+				in = new BufferedInputStream(new FileInputStream(sourceFile));
+				GpxParser parser = new GpxParser();
+				parser.parse(in);
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (XmlPullParserException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} finally {
+				if (in != null) {
+					try {
+						in.close();
+					} catch (IOException e) {
+					}
+				}
+			}
+		}
 	}
 
 	@Override
