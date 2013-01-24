@@ -78,7 +78,7 @@ public class PlayLocationsService extends Service {
 		notification.flags = Notification.FLAG_NO_CLEAR
 				| Notification.FLAG_ONGOING_EVENT;
 
-		Intent notificationIntent = new Intent(this, MockGPSPathActivity.class);
+		Intent notificationIntent = new Intent(this, ReplayGpxActivity.class);
 		PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
 				notificationIntent, 0);
 
