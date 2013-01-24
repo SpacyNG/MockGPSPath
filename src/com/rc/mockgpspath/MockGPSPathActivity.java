@@ -34,6 +34,7 @@ import com.google.android.maps.MyLocationOverlay;
 import com.google.android.maps.Overlay;
 import com.google.android.maps.Projection;
 import com.rc.mockgpspath.DraggableLayout.DragListener;
+import com.rc.mockgpspath.NodeOverlay.NodeOverlayCallbacks;
 import com.rc.mockgpspath.quickaction.ActionItem;
 import com.rc.mockgpspath.quickaction.QuickAction;
 import com.rc.mockgpspath.quickaction.QuickAction.OnActionItemClickListener;
@@ -95,7 +96,13 @@ public class MockGPSPathActivity extends MapActivity {
 		draggableLayout.setDragListener(dragListener);
 
 		List<Overlay> overlays = mapView.getOverlays();
-		nodeOverlay = new NodeOverlay(this);
+		nodeOverlay = new NodeOverlay(this.getApplicationContext(),
+				new NodeOverlayCallbacks() {
+					@Override
+					public MapView getMapView() {
+						return mapView;
+					}
+				});
 		overlays.add(nodeOverlay);
 		myLocationOverlay = new MyLocationOverlay(MockGPSPathActivity.this, mapView);
 		overlays.add(myLocationOverlay);
