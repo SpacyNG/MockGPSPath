@@ -124,12 +124,6 @@ public class MockGPSPathActivity extends MapActivity {
 		
 		RootTools.debugMode = true;
 		
-		if(RootTools.isAccessGiven()) {
-			RootTools.log("got access");
-			canUpdateMock = true;
-		} else {
-			RootTools.log("no access");
-		}
 		
 
 		if (MockGPSPathService.instance != null && MockGPSPathService.instance.currentThread != null) {
