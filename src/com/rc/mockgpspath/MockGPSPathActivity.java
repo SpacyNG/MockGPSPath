@@ -83,7 +83,10 @@ public class MockGPSPathActivity extends MapActivity {
 		setContentView(R.layout.main);
 
 		mapView = (MapView) findViewById(R.id.mapview);
-		mapView.getController().setZoom(2);
+		
+		mapView.setBuiltInZoomControls(true);
+		
+		//mapView.getController().setZoom(2);
 
 		DraggableLayout draggableLayout = (DraggableLayout) findViewById(R.id.topbar);
 		mappin = findViewById(R.id.mappin);
@@ -124,6 +127,12 @@ public class MockGPSPathActivity extends MapActivity {
 		
 		RootTools.debugMode = true;
 		
+		if(RootTools.isAccessGiven()) {
+			RootTools.log("got access");
+			canUpdateMock = true;
+		} else {
+			RootTools.log("no access");
+		}
 		
 
 		if (MockGPSPathService.instance != null && MockGPSPathService.instance.currentThread != null) {
@@ -154,9 +163,11 @@ public class MockGPSPathActivity extends MapActivity {
 			}
 		}
 
+		/*
 		mapView.getController().setZoom(zoomLevel);
 		if (centerPoint != null)
 			mapView.getController().setCenter(centerPoint);
+		*/
 
 		/*
 		AdView adView = (AdView) findViewById(R.id.adView);
